@@ -1,0 +1,184 @@
+<!doctype html><!--
+	lambda Training
+	Fri 4 Aug 2023
+	Made by PhilAndChill (c) 2023
+	See LICENSE
+--><html data-bs-theme="dark">
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="">
+		<meta property="og:title" content="Lambda Training">
+		<meta property="og:description" content="For training greek letters.">
+		<meta property="og:image" content="preview.jpg">
+		<title>Lambda Training</title>
+		<link rel="icon" href="favicon.png" type="image/png"/>
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap-dark-5@1.1.3/dist/css/bootstrap-dark-plugin.min.css" rel="stylesheet">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+	</head>
+	<body>
+		<center>
+			<h1>Lambda Training <button class="btn btn-secondary" title="Optionen" onclick="lambdaSelectToggle()">☰</button></h1>
+			<div id="lambdatrain">
+				<div class="p-2" style="font-weight:bold"><span id="q"></span> | <span id="t"></span></div>
+				<div class="p-2"><button id="btn1" class="btn btn-secondary" style="font-size:2em">Solve</button></div>
+				<div style="font-size:3em" id="lambdaR">&nbsp;</div>
+				<div style="font-size:15em" id="lambda">&nbsp;</div>
+			</div>
+			<div id="lambdaselect" style="display:none">
+				<button class="btn btn-secondary" onclick="app.lambdaApply()">Apply</button>
+				<table id="lambdatbl" class="table" style="width:auto">
+					<tr>
+						<th>Big</th>
+						<th>Small</th>
+					</tr>
+					<tr>
+						<td><button class="btn btn-secondary" onclick="selToggle('big')">Invert selection</button></td>
+						<td><button class="btn btn-secondary" onclick="selToggle('small')">Invert selection</button></td>
+					</tr>
+				</table>
+				<button class="btn btn-secondary" onclick="app.lambdaApply()">Apply</button>
+				<div class="p-4"></div>
+			</div>
+		</center>
+		<script>
+			Array.prototype.shuffle = function() {
+				for( var i = 0; i < this.length - 1; i++ ) {
+					var idx = Math.floor( Math.random() * this.length )
+					var tmp = this[idx]
+					this[idx] = this[i]
+					this[i] = tmp
+				}
+			}
+			selToggle = what => {
+				$("#lambdatbl").find("input[id^="+what+"]").each( (i,e) => {
+					e.checked = !e.checked
+				})
+			}
+			lambdaSelectToggle = () => {
+				$("#lambdatrain").toggle()
+				$("#lambdaselect").toggle()
+			}
+			timeFormat = t => {
+				var m = Math.floor(t / 60)
+				var s = t % 60
+				return m + ":" + ("0" + s).slice(-2)
+			}
+			var app = {
+				index: 0,
+				time: 0,
+				running: false,
+				lambda: [],
+				load: async data => {
+					lambda = await data.json()
+					var keys = Object.keys(lambda)
+					for( var i = 0; i < keys.length; i++ ) {
+						var gname = keys[i]
+						$("#lambdatbl").append(
+							'<tr><td><div class="form-check form-switch"> \
+							<input class="form-check-input" type="checkbox" id="big_' + gname + '" checked> \
+							<label class="form-check-label" for="big_' + gname + '">' + gname + '</label> \
+							</div></td><td><div class="form-check form-switch"> \
+							<input class="form-check-input" type="checkbox" id="small_' + gname + '" checked> \
+							<label class="form-check-label" for="small_' + gname + '">' + gname + '</label> \
+							</div></td></tr>')
+					}
+					setInterval( () => {
+						if( app.running ) {
+							app.time++
+							$("#t").html( timeFormat( app.time ) )
+						}
+					}, 1000 )
+					app.lambdaApply()
+				},
+				reset: () => {
+					app.index = 0
+					app.time = 0
+					app.running = true
+					$("#t").html( timeFormat( 0 ) )
+				},
+				showQuestion: () => {
+					var ka = app.lambda[app.index]
+					$("#q").html( (app.index+1) + "/" + app.lambda.length )
+					if( ka.lambdaDraw ) {
+						$("#lambda").html("&nbsp;")
+						$("#lambdaR").html( ka.q )
+					} else {
+						$("#lambda").html( ka.q )
+						$("#lambdaR").html("&nbsp;")
+					}
+					$("#btn1").html("Solve")
+				},
+				showAnswer: () => {
+					var ka = app.lambda[app.index]
+					if( ka.lambdaDraw )
+						$("#lambda").html( ka.a )
+					else
+						$("#lambdaR").html( ka.a )
+					app.index++
+					if( app.index == app.lambda.length ) {
+						app.running = false
+						$("#btn1").html("Restart")
+					}
+					else
+						$("#btn1").html("Next")
+				},
+				lambdaApply: () => {
+					$("#lambdaselect").hide()
+					var lambdaJ = []
+					var lambdaR = []
+					$("#lambdatbl").find("input[class=form-check-input]").each( (i,e) => {
+						if( e.checked ) {
+							var ids = e.id.split('_')
+							var cat = ids[0] == "big" ? 1 : 2
+							var group = ids[1]
+							var tk = lambda[group]
+							for( var i = 0; i < tk.length; i++ ) {
+								lambdaJ.push({
+									q: tk[i][0] + ", " + (cat == 1 ? "big" : "small"),
+									a: tk[i][cat],
+									lambdaDraw: true,
+								})
+								lambdaR.push({
+									q: tk[i][cat],
+									a: tk[i][0] + ", " + (cat == 1 ? "big" : "small"),
+									lambdaDraw: false,
+								})
+							}
+						}
+					})
+					app.lambda = []
+					if( lambdaJ.length != 0 ) {
+						lambdaJ.shuffle()
+						lambdaJ.forEach( e => {
+							app.lambda.push(e)
+						})
+						lambdaR.shuffle()
+						lambdaR.forEach( e => {
+							app.lambda.push(e)
+						})
+					}
+					else
+						app.lambda.push({q:"None?",a:"",lambdaDraw:false})
+					app.reset()
+					app.showQuestion()
+					$("#lambdatrain").show()
+				},
+			}
+			$( () => {
+				$("#btn1").click( e => {
+					if( $(e.currentTarget).html() == "Next" )
+						app.showQuestion()
+					else if( $(e.currentTarget).html() == "Restart" )
+						app.lambdaApply()
+					else
+						app.showAnswer()
+				})
+				fetch("data/lambda.json").then(app.load)
+			})
+		</script>
+	</body>
+</html>
